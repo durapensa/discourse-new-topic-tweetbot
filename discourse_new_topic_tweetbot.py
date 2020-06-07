@@ -94,7 +94,7 @@ def build_tweet():
     tweet_string += tweet_hashtags + "\n"
     tweet_string += queued_topic.title + "\n"
     tweet_string += tweet_mentions + "\n"
-    tweet_string += DISCOURSE_HOST
+    tweet_string += DISCOURSE_HOST+"/t/"
     tweet_string += queued_topic.slug+"/"+str(queued_topic.id)
 
     if TWEET_USE_THUMBNAILS and queued_topic.image_url:
