@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 def authenticate():
-    """ Authenticate to Discourse & Twitter and create API object. """
+    """ Authenticate to Discourse & Twitter and create API objects. """
     global discourse_api
     global twitter_api
 
@@ -60,7 +60,7 @@ def get_settings():
     DISCOURSE_SHARED_PATH     = config('DISCOURSE_SHARED_PATH', default='/var/discourse/shared/standalone')
     DISCOURSE_NEWEST_TOPIC_ID = config('DISCOURSE_NEWEST_TOPIC_ID', default=1, cast=int)
     POLLING_INTERVAL          = config('POLLING_INTERVAL', default=10, cast=int)
-    TWEET_REFRESH_INTERVAL      = config('TWEET_REFRESH_INTERVAL', default=8, cast=int)
+    TWEET_REFRESH_INTERVAL    = config('TWEET_REFRESH_INTERVAL', default=8, cast=int)
     TWEET_USE_THUMBNAILS      = config('TWEET_USE_THUMBNAILS', default=1, cast=bool)
     TWEET_STRING              = config('TWEET_STRING')
     TWEET_MENTIONS            = config('TWEET_MENTIONS')
