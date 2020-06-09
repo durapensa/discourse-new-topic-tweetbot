@@ -204,7 +204,8 @@ def main():
                 logger.info ("No new topics to tweet..")
                 tweet_refresh_interval = TWEET_REFRESH_INTERVAL
             logger.info ("Sleeping for POLLING_INTERVAL...")
-            sleep(max(0,POLLING_INTERVAL*60-tweet_refresh_interval*60))
+            #logger.info (str(max(min(POLLING_INTERVAL*60,TWEET_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-tweet_refresh_interval*60)))
+            sleep (max(min(POLLING_INTERVAL*60,TWEET_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-tweet_refresh_interval*60))
             enque_newest_topics()
 
 if __name__ == "__main__":
