@@ -52,7 +52,7 @@ def get_settings():
     global POLLING_INTERVAL
     global TWEET_REFRESH_INTERVAL
     global TWEET_USE_THUMBNAILS
-    global TWEET_STRING
+    global TWEET_PREPEND
     global TWEET_MENTIONS
     global TWEET_HASHTAGS
 
@@ -60,9 +60,9 @@ def get_settings():
     DISCOURSE_SHARED_PATH     = config('DISCOURSE_SHARED_PATH', default='/var/discourse/shared/standalone')
     DISCOURSE_NEWEST_TOPIC_ID = config('DISCOURSE_NEWEST_TOPIC_ID', default=1, cast=int)
     POLLING_INTERVAL          = config('POLLING_INTERVAL', default=10, cast=int)
-    TWEET_REFRESH_INTERVAL      = config('TWEET_REFRESH_INTERVAL', default=8, cast=int)
+    TWEET_REFRESH_INTERVAL    = config('TWEET_REFRESH_INTERVAL', default=8, cast=int)
     TWEET_USE_THUMBNAILS      = config('TWEET_USE_THUMBNAILS', default=1, cast=bool)
-    TWEET_STRING              = config('TWEET_STRING')
+    TWEET_PREPEND             = config('TWEET_STRING')
     TWEET_MENTIONS            = config('TWEET_MENTIONS')
     TWEET_HASHTAGS            = config('TWEET_HASHTAGS')
 
@@ -71,7 +71,8 @@ class HTMLMentionsParser(HTMLParser):
     def handle_data(self, data):
         """ Search for specific strings for mentions & hashtags. Intended use: 
             mentions & hashtags within a Discourse post are hyperlinked causing
-            BBCode to separate them with linebreaks in the cooked post."""
+            BBCode to separate them with linebreaks in the cooked post. Globals
+            are hacky until this class & its methods are better understood."""
         global tweet_mentions
         global tweet_hashtags
         tweet_hashtags = TWEET_HASHTAGS
@@ -90,35 +91,32 @@ class HTMLMentionsParser(HTMLParser):
 
 parse_twitter_mentions = HTMLMentionsParser()
 
-def build_tweet_string():
+def build_tweet_string(queued_topic,tweet_hashtags,tweet_mentions):
     """ Builds a tweet from queued_topic. """
-    tweet_string = TWEET_STRING
 
-    try:
-        queued_topic
-    except NameError:
-        pass
+    if hasattr(queued_topic, 'excerpt'):
+        parse_twitter_mentions.feed(queued_topic.excerpt)
+        parse_twitter_mentions.close
     else:
-        if hasattr(queued_topic, 'excerpt'):
-            parse_twitter_mentions.feed(queued_topic.excerpt)
-        else:
-            tweet_hashtags = TWEET_HASHTAGS
-            tweet_mentions = TWEET_MENTIONS
+        tweet_hashtags = TWEET_HASHTAGS
+        tweet_mentions = TWEET_MENTIONS
 
-        # customizations go here:
-        tweet_string += tweet_hashtags + "\n"
-        tweet_string += queued_topic.title + "\n"
-        tweet_string += tweet_mentions + "\n"
-        tweet_string += DISCOURSE_HOST+"/t/"
-        tweet_string += queued_topic.slug+"/"+str(queued_topic.id)
+    # customizations go here:
+    tweet_string  = TWEET_PREPEND
+    tweet_string += tweet_hashtags + "\n"
+    tweet_string += queued_topic.title + "\n"
+    tweet_string += tweet_mentions + "\n"
+    tweet_string += DISCOURSE_HOST+"/t/"
+    tweet_string += queued_topic.slug+"/"+str(queued_topic.id)
 
     return tweet_string
 
-def enque_newest_topics():
+def enque_newest_topics(queued_topics_len):
     """ Find the newest Discourse topics *among the latest topics* from
-        latest.json and appends them to queued_topics for tweeting. """
+        latest.json and appends them to queued_topics for tweeting. 
+        Note: keeping queued_topics global so it's not copied around every
+        N minutes."""
     global queued_topics
-    global queued_topics_len
     latest_topics           = discourse_api.get_latest_topics('default')
     newest_topic_index      = 0
     compar_topic_created_at = latest_topics[newest_topic_index].created_at
@@ -146,18 +144,10 @@ def enque_newest_topics():
             logger.info ('Added '+str(queued_topics_len)+' item(s) to queue')
             queued_topic.sort(queued_topics.id)
 
-def go_interactive():
-    tweet_string = build_tweet_string()
-    logger.info ("INTERACTIVE TEST: next tweet from Discourse topic "+str(queued_topic.id)+":\n"+tweet_string)
-    if TWEET_USE_THUMBNAILS and queued_topic.image_url:
-        logger.info ("MEDIA INCLUSION from: "+queued_topic.image_url)
+    return len(queued_topics)
 
-def refresh_queued_topic():
-    global queued_topic
-    queued_topic = discourse_api.get_topic(queued_topic.id)
-
-def tweet_queued_topic():
-    tweet_string = build_tweet_string()
+def tweet(queued_topic):
+    tweet_string = build_tweet_string(queued_topic,TWEET_HASHTAGS,TWEET_MENTIONS)
 
     if TWEET_USE_THUMBNAILS and queued_topic.image_url:
         thumbnail_path=queued_topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH)
@@ -178,17 +168,18 @@ def tweet_queued_topic():
             logger.info ('TWEETED topic '+str(queued_topic.id)+" "+queued_topic.title)
 
 def main():
-    global queued_topic
-    global queued_topics_len
     authenticate()
     get_settings()
     queued_topics_len = -1
-    enque_newest_topics()
+    enqued_topics_len = enque_newest_topics(queued_topics_len)
 
     if stdin.isatty():
         if queued_topics_len > 0:
             queued_topic = queued_topics.pop()
-            go_interactive()
+            tweet_string = build_tweet_string(queued_topic,TWEET_PREPEND,TWEET_MENTIONS,TWEET_HASHTAGS)
+            logger.info ("INTERACTIVE TEST: next tweet from Discourse topic "+str(queued_topic.id)+":\n"+tweet_string)
+            if TWEET_USE_THUMBNAILS and queued_topic.image_url:
+                logger.info ("MEDIA INCLUSION from: "+queued_topic.image_url)
         else:
             logger.info ("INTERACTIVE TEST: No new Discourse topic to Tweet. ")
 
@@ -199,15 +190,15 @@ def main():
                 queued_topic = queued_topics.pop()
                 queued_topics_len -= 1
                 sleep(TWEET_REFRESH_INTERVAL*60)
+                queued_topic = discourse_api.get_topic(queued_topic.id)
+                tweet(queued_topic)
                 tweet_refresh_interval = 0
-                refresh_queued_topic()
-                tweet_queued_topic()
             else:
                 logger.info ("No new topics to tweet..")
                 tweet_refresh_interval = TWEET_REFRESH_INTERVAL
             logger.info ("Sleeping for "+str(max(min(POLLING_INTERVAL,TWEET_REFRESH_INTERVAL),POLLING_INTERVAL-tweet_refresh_interval)))
             sleep (max(min(POLLING_INTERVAL*60,TWEET_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-tweet_refresh_interval*60))
-            enque_newest_topics()
+            enqued_topics_len = enque_newest_topics(queued_topics_len)
 
 if __name__ == "__main__":
     main()
