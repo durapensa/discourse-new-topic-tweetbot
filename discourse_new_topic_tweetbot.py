@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 def authenticate():
-    """ Authenticate to Discourse & Twitter and create API objects. """
+    """ Authenticate to Discourse & Twitter and create API object. """
     global discourse_api
     global twitter_api
 
@@ -60,7 +60,7 @@ def get_settings():
     DISCOURSE_SHARED_PATH     = config('DISCOURSE_SHARED_PATH', default='/var/discourse/shared/standalone')
     DISCOURSE_NEWEST_TOPIC_ID = config('DISCOURSE_NEWEST_TOPIC_ID', default=1, cast=int)
     POLLING_INTERVAL          = config('POLLING_INTERVAL', default=10, cast=int)
-    TWEET_REFRESH_INTERVAL    = config('TWEET_REFRESH_INTERVAL', default=8, cast=int)
+    TWEET_REFRESH_INTERVAL      = config('TWEET_REFRESH_INTERVAL', default=8, cast=int)
     TWEET_USE_THUMBNAILS      = config('TWEET_USE_THUMBNAILS', default=1, cast=bool)
     TWEET_STRING              = config('TWEET_STRING')
     TWEET_MENTIONS            = config('TWEET_MENTIONS')
@@ -97,11 +97,13 @@ def build_tweet_string():
     try:
         queued_topic
     except NameError:
-        logger.info('no queued topic')
-        #pass
+        pass
     else:
         if hasattr(queued_topic, 'excerpt'):
             parse_twitter_mentions.feed(queued_topic.excerpt)
+        else:
+            tweet_hashtags = TWEET_HASHTAGS
+            tweet_mentions = TWEET_MENTIONS
 
         # customizations go here:
         tweet_string += tweet_hashtags + "\n"
@@ -145,19 +147,14 @@ def enque_newest_topics():
             queued_topic.sort(queued_topics.id)
 
 def go_interactive():
-    try:
-        queued_topic = queued_topics.pop()
-    except NameError:
-        logger.info ("\nINTERACTIVE TEST: No new Discourse topic to Tweet. ")
-    else:
-        tweet_string = build_tweet_string()
-        logger.info ("\nINTERACTIVE TEST: next tweet from Discourse topic "+str(queued_topic.id)+":\n"+tweet_string)
-        if TWEET_USE_THUMBNAILS and queued_topic.image_url:
-            logger.debug ("MEDIA INCLUSION from: ",queued_topic.image_url)
+    tweet_string = build_tweet_string()
+    logger.info ("INTERACTIVE TEST: next tweet from Discourse topic "+str(queued_topic.id)+":\n"+tweet_string)
+    if TWEET_USE_THUMBNAILS and queued_topic.image_url:
+        logger.info ("MEDIA INCLUSION from: "+queued_topic.image_url)
 
 def refresh_queued_topic():
     global queued_topic
-    queued_topic = discourse_api.get_topic(queued_topic[0].id)
+    queued_topic = discourse_api.get_topic(queued_topic.id)
 
 def tweet_queued_topic():
     tweet_string = build_tweet_string()
@@ -168,17 +165,17 @@ def tweet_queued_topic():
         try:
             twitter_api.update_with_media(thumbnail_path, tweet_string)
         except:
-            logger.info (' TWEET FAILED'.join([' topic ',str(queued_topic.id),queued_topic.title]))
+            logger.info ('TWEET FAILED topic '+str(queued_topic.id)+" "+queued_topic.title)
         else: 
-            logger.info (' TWEETED'.join([' topic ',str(queued_topic.id),queued_topic.title]))
+            logger.info ('TWEETED topic '+str(queued_topic.id)+" "+queued_topic.title)
 
     else:
         try:
             twitter_api.update_status(tweet_string)
         except:
-            logger.info (' TWEET FAILED'.join([' topic ',str(queued_topic.id),queued_topic.title]))
+            logger.info ('TWEET FAILED topic '+str(queued_topic.id)+" "+queued_topic.title)
         else: 
-            logger.info (' TWEETED'.join([' topic ',str(queued_topic.id),queued_topic.title]))
+            logger.info ('TWEETED topic '+str(queued_topic.id)+" "+queued_topic.title)
 
 def main():
     global queued_topic
@@ -189,13 +186,18 @@ def main():
     enque_newest_topics()
 
     if stdin.isatty():
-        go_interactive()
+        if queued_topics_len > 0:
+            queued_topic = queued_topics.pop()
+            go_interactive()
+        else:
+            logger.info ("INTERACTIVE TEST: No new Discourse topic to Tweet. ")
+
     else:
         while True:
             if queued_topics_len > 0:
+                logger.info (str(queued_topics_len)+" new topic(s) to tweet!\nSleeping for "+str(TWEET_REFRESH_INTERVAL)+"...")
                 queued_topic = queued_topics.pop()
                 queued_topics_len -= 1
-                logger.info (queued_topics_len+" new topic(s) to tweet!\nSleeping for TWEET_REFRESH_INTERVAL...")
                 sleep(TWEET_REFRESH_INTERVAL*60)
                 tweet_refresh_interval = 0
                 refresh_queued_topic()
@@ -203,8 +205,7 @@ def main():
             else:
                 logger.info ("No new topics to tweet..")
                 tweet_refresh_interval = TWEET_REFRESH_INTERVAL
-            logger.info ("Sleeping for POLLING_INTERVAL...")
-            #logger.info (str(max(min(POLLING_INTERVAL*60,TWEET_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-tweet_refresh_interval*60)))
+            logger.info ("Sleeping for "+str(max(min(POLLING_INTERVAL,TWEET_REFRESH_INTERVAL),POLLING_INTERVAL-tweet_refresh_interval)))
             sleep (max(min(POLLING_INTERVAL*60,TWEET_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-tweet_refresh_interval*60))
             enque_newest_topics()
 
