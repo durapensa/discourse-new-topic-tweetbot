@@ -171,7 +171,7 @@ def main():
     authenticate()
     get_settings()
     queued_topics_len = -1
-    enqued_topics_len = enque_newest_topics(queued_topics_len)
+    queued_topics_len = enque_newest_topics(queued_topics_len)
 
     if stdin.isatty():
         if queued_topics_len > 0:
@@ -198,7 +198,7 @@ def main():
                 tweet_refresh_interval = TWEET_REFRESH_INTERVAL
             logger.info ("Sleeping for "+str(max(min(POLLING_INTERVAL,TWEET_REFRESH_INTERVAL),POLLING_INTERVAL-tweet_refresh_interval)))
             sleep (max(min(POLLING_INTERVAL*60,TWEET_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-tweet_refresh_interval*60))
-            enqued_topics_len = enque_newest_topics(queued_topics_len)
+            queued_topics_len = enque_newest_topics(queued_topics_len)
 
 if __name__ == "__main__":
     main()
