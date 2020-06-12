@@ -91,18 +91,18 @@ class HTMLMentionsParser(HTMLParser):
 
 parse_twitter_mentions = HTMLMentionsParser()
 
-def build_tweet_string(queued_topic,tweet_hashtags,tweet_mentions):
+def build_tweet_string(queued_topic,tweet_prepend,tweet_hashtags,tweet_mentions):
     """ Builds a tweet from queued_topic. """
 
-    if hasattr(queued_topic, 'excerpt'):
-        parse_twitter_mentions.feed(queued_topic.excerpt)
+    if hasattr(queued_topic, 'cooked'):
+        parse_twitter_mentions.feed(queued_topic.cooked)
         parse_twitter_mentions.close
     else:
         tweet_hashtags = TWEET_HASHTAGS
         tweet_mentions = TWEET_MENTIONS
 
     # customizations go here:
-    tweet_string  = TWEET_PREPEND
+    tweet_string  = tweet_prepend
     tweet_string += tweet_hashtags + "\n"
     tweet_string += queued_topic.title + "\n"
     tweet_string += tweet_mentions + "\n"
@@ -144,10 +144,10 @@ def enque_newest_topics(queued_topics_len):
             logger.info ('Added '+str(queued_topics_len)+' item(s) to queue')
             queued_topic.sort(queued_topics.id)
 
-    return len(queued_topics)
+    return queued_topics_len
 
 def tweet(queued_topic):
-    tweet_string = build_tweet_string(queued_topic,TWEET_HASHTAGS,TWEET_MENTIONS)
+    tweet_string = build_tweet_string(queued_topic,TWEET_PREPEND,TWEET_HASHTAGS,TWEET_MENTIONS)
 
     if TWEET_USE_THUMBNAILS and queued_topic.image_url:
         thumbnail_path=queued_topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH)
