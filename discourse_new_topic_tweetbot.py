@@ -190,9 +190,9 @@ def main():
                 queued_topic = queued_topics.pop()
                 queued_topics_len -= 1
                 sleep(TWEET_REFRESH_INTERVAL*60)
+                tweet_refresh_interval = 0
                 queued_topic = discourse_api.get_topic(queued_topic.id)
                 tweet(queued_topic)
-                tweet_refresh_interval = 0
             else:
                 logger.info ("No new topics to tweet..")
                 tweet_refresh_interval = TWEET_REFRESH_INTERVAL
