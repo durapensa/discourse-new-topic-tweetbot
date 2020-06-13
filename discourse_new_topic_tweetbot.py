@@ -50,7 +50,7 @@ def get_settings():
     global DISCOURSE_SHARED_PATH
     global DISCOURSE_NEWEST_TOPIC_ID
     global POLLING_INTERVAL
-    global TWEET_REFRESH_INTERVAL
+    global TOPIC_REFRESH_INTERVAL
     global TWEET_USE_THUMBNAILS
     global TWEET_PREPEND
     global TWEET_MENTIONS
@@ -60,7 +60,7 @@ def get_settings():
     DISCOURSE_SHARED_PATH     = config('DISCOURSE_SHARED_PATH', default='/var/discourse/shared/standalone')
     DISCOURSE_NEWEST_TOPIC_ID = config('DISCOURSE_NEWEST_TOPIC_ID', default=1, cast=int)
     POLLING_INTERVAL          = config('POLLING_INTERVAL', default=10, cast=int)
-    TWEET_REFRESH_INTERVAL    = config('TWEET_REFRESH_INTERVAL', default=8, cast=int)
+    TOPIC_REFRESH_INTERVAL    = config('TOPIC_REFRESH_INTERVAL', default=8, cast=int)
     TWEET_USE_THUMBNAILS      = config('TWEET_USE_THUMBNAILS', default=1, cast=bool)
     TWEET_PREPEND             = config('TWEET_STRING')
     TWEET_MENTIONS            = config('TWEET_MENTIONS')
@@ -186,18 +186,18 @@ def main():
     else:
         while True:
             if queued_topics_len > 0:
-                logger.info (str(queued_topics_len)+" new topic(s) to tweet!\nSleeping for "+str(TWEET_REFRESH_INTERVAL)+"...")
+                logger.info (str(queued_topics_len)+" new topic(s) to tweet!\nSleeping for "+str(TOPIC_REFRESH_INTERVAL)+"...")
                 queued_topic = queued_topics.pop()
                 queued_topics_len -= 1
-                sleep(TWEET_REFRESH_INTERVAL*60)
-                tweet_refresh_interval = 0
+                sleep(TOPIC_REFRESH_INTERVAL*60)
+                topic_refresh_interval = 0
                 queued_topic = discourse_api.get_topic(queued_topic.id)
                 tweet(queued_topic)
             else:
                 logger.info ("No new topics to tweet..")
-                tweet_refresh_interval = TWEET_REFRESH_INTERVAL
-            logger.info ("Sleeping for "+str(max(min(POLLING_INTERVAL,TWEET_REFRESH_INTERVAL),POLLING_INTERVAL-tweet_refresh_interval)))
-            sleep (max(min(POLLING_INTERVAL*60,TWEET_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-tweet_refresh_interval*60))
+                topic_refresh_interval = TOPIC_REFRESH_INTERVAL
+            logger.info ("Sleeping for "+str(max(min(POLLING_INTERVAL,TOPIC_REFRESH_INTERVAL),POLLING_INTERVAL-topic_refresh_interval)))
+            sleep (max(min(POLLING_INTERVAL*60,TOPIC_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-topic_refresh_interval*60))
             queued_topics_len = enque_newest_topics(queued_topics_len)
 
 if __name__ == "__main__":
