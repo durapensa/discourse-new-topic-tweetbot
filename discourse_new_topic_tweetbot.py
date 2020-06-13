@@ -11,6 +11,8 @@ from decouple import config
 from html.parser import HTMLParser
 from time import sleep
 from sys import stdin
+from readchar import readkey
+from pprint import pprint
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -93,27 +95,26 @@ class HTMLMentionsParser(HTMLParser):
             tweet_mentions += data
         if data.find('#') > -1:
             tweet_hashtags += data
-        # logger.debug ("«"+data+"»")
+        #logger.info ("«"+data+"»")
 
 parse_twitter_mentions = HTMLMentionsParser()
 
-def build_tweet_string(queued_topic,tweet_prepend,tweet_hashtags,tweet_mentions):
-    """ Builds a tweet from queued_topic. """
+def build_tweet_string(topic):
+    """ Builds a tweet. """
+    global tweet_hashtags
+    global tweet_mentions
+    tweet_prepend = TWEET_PREPEND
 
-    if hasattr(queued_topic, 'cooked'):
-        parse_twitter_mentions.feed(queued_topic.cooked)
-        parse_twitter_mentions.close
-    else:
-        tweet_hashtags = TWEET_HASHTAGS
-        tweet_mentions = TWEET_MENTIONS
+    parse_twitter_mentions.feed(topic.post_stream['posts'][0]['cooked'])
+    parse_twitter_mentions.close
 
     # customizations go here:
     tweet_string  = tweet_prepend
     tweet_string += tweet_hashtags + "\n"
-    tweet_string += queued_topic.title + "\n"
+    tweet_string += topic.title + "\n"
     tweet_string += tweet_mentions + "\n"
     tweet_string += DISCOURSE_HOST+"/t/"
-    tweet_string += queued_topic.slug+"/"+str(queued_topic.id)
+    tweet_string += topic.slug+"/"+str(topic.id)
 
     return tweet_string
 
@@ -156,8 +157,32 @@ def enque_newest_topics(queued_topics_len):
 
     return queued_topics_len
 
+def review_latest_topics():
+    try:
+        logger.info('Fetching latest topics from Discourse server...')
+        latest_topics       = discourse_api.get_latest_topics('default')
+    except:
+        logger.info('Failed to retrieve latest topics from Discourse server')
+
+    for index, topic in enumerate(latest_topics):
+        try:
+            topic = discourse_api.get_topic(latest_topics[index].id)
+        except:
+            logger.info('Failed to get topic from Discourse server')
+        else:
+            tweet_string = build_tweet_string(topic)
+            logger.info ("Topic "+str(topic.id)+":\n"+tweet_string)
+            if TWEET_USE_THUMBNAILS and topic.image_url:
+                logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
+            logger.info ("Show next topic (y/n/q)?")
+            user_answer = readkey()
+            if user_answer.lower() == 'y':
+                pass
+            else:
+                break
+
 def tweet(queued_topic):
-    tweet_string = build_tweet_string(queued_topic,TWEET_PREPEND,TWEET_HASHTAGS,TWEET_MENTIONS)
+    tweet_string = build_tweet_string(queued_topic)
 
     if TWEET_USE_THUMBNAILS and queued_topic.image_url:
         thumbnail_path=queued_topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH)
@@ -184,14 +209,25 @@ def main():
     queued_topics_len = enque_newest_topics(queued_topics_len)
 
     if stdin.isatty():
+        logger.info ("⟫⟫⟫ Interactive testing mode ⟪⟪⟪  No tweets will be posted.")
         if queued_topics_len > 0:
-            queued_topic = queued_topics.pop()
-            tweet_string = build_tweet_string(queued_topic,TWEET_PREPEND,TWEET_MENTIONS,TWEET_HASHTAGS)
-            logger.info ("INTERACTIVE TEST: next tweet from Discourse topic "+str(queued_topic.id)+":\n"+tweet_string)
-            if TWEET_USE_THUMBNAILS and queued_topic.image_url:
-                logger.info ("MEDIA INCLUSION from: "+queued_topic.image_url)
+            try:
+                #get the full topic, not the truncated one from latest_topics
+                topic = discourse_api.get_topic(queued_topics[0].id)
+            except:
+                logger.info('Failed to get newest topic from Discourse server')
+            else:
+                tweet_string = build_tweet_string(topic)
+                logger.info ("Next tweet from Discourse topic "+str(topic.id)+":\n"+tweet_string)
+                if TWEET_USE_THUMBNAILS and topic.image_url:
+                    logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
         else:
-            logger.info ("INTERACTIVE TEST: No new Discourse topic to Tweet. ")
+            logger.info ("No new Discourse topic to Tweet.")
+
+        logger.info ("Iterate through all topics in latest topics (y/n/q)?")
+        user_answer = readkey()
+        if user_answer.lower() == 'y':
+            review_latest_topics()
 
     else:
         while True:
