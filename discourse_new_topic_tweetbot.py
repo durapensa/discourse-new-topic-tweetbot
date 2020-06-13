@@ -141,7 +141,7 @@ def enque_newest_topics(queued_topics_len):
                     queued_topics_len += 1
      
         if len(queued_topics) > queued_topics_len:
-            logger.info ('Added '+str(queued_topics_len)+' item(s) to queue')
+            logger.info ('Added '+str(len(queued_topics)-queued_topics_len)+' item(s) to queue')
             queued_topic.sort(queued_topics.id)
 
     return queued_topics_len
@@ -196,6 +196,7 @@ def main():
             else:
                 logger.info ("No new topics to tweet..")
                 topic_refresh_interval = TOPIC_REFRESH_INTERVAL
+
             logger.info ("Sleeping for "+str(max(min(POLLING_INTERVAL,TOPIC_REFRESH_INTERVAL),POLLING_INTERVAL-topic_refresh_interval)))
             sleep (max(min(POLLING_INTERVAL*60,TOPIC_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-topic_refresh_interval*60))
             queued_topics_len = enque_newest_topics(queued_topics_len)
