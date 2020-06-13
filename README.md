@@ -49,8 +49,8 @@ bot will tweet the NEWEST among them. This may be addressed by assigning a
 value to `DISCOURSE_NEWEST_TOPIC_ID`. Changing this value can also prevent the
 bot from creating a duplicate tweet in the case of a manual restart.
 
-The default `POLLING_INTERVAL` is 10 minutes, and `TWEET_DELAY` interval is 8
-minutes, allowing time for Discourse to generate thumbnails.
+The default `POLLING_INTERVAL` is 10 minutes, and `TOPIC_REFRESH_INTERVAL`
+interval is 8 minutes, allowing time for Discourse to generate thumbnails.
 
 `TWEET_PREPEND` `TWEET_HASHTAGS` `TWEET_MENTIONS` will be added to the beginning
 of each tweet, before the URL of the Discourse topic.
