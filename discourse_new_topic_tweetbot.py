@@ -158,8 +158,8 @@ def enque_newest_topics(queued_topics_len):
     return queued_topics_len
 
 def review_latest_topics():
+    logger.info('Fetching latest topics from Discourse server...')
     try:
-        logger.info('Fetching latest topics from Discourse server...')
         latest_topics       = discourse_api.get_latest_topics('default')
     except:
         logger.info('Failed to retrieve latest topics from Discourse server')
@@ -181,26 +181,26 @@ def review_latest_topics():
             else:
                 break
 
-def tweet(queued_topic):
-    tweet_string = build_tweet_string(queued_topic)
+def tweet(topic):
+    tweet_string = build_tweet_string(topic)
 
-    if TWEET_USE_THUMBNAILS and queued_topic.image_url:
-        thumbnail_path=queued_topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH)
+    if TWEET_USE_THUMBNAILS and topic.image_url:
+        thumbnail_path=topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH)
 
         try:
             twitter_api.update_with_media(thumbnail_path, tweet_string)
         except:
-            logger.info ('TWEET FAILED topic '+str(queued_topic.id)+" "+queued_topic.title)
+            logger.info ('TWEET FAILED topic '+str(topic.id)+" "+topic.title)
         else: 
-            logger.info ('TWEETED topic '+str(queued_topic.id)+" "+queued_topic.title)
+            logger.info ('TWEETED topic '+str(topic.id)+" "+topic.title)
 
     else:
         try:
             twitter_api.update_status(tweet_string)
         except:
-            logger.info ('TWEET FAILED topic '+str(queued_topic.id)+" "+queued_topic.title)
+            logger.info ('TWEET FAILED topic '+str(topic.id)+" "+topic.title)
         else: 
-            logger.info ('TWEETED topic '+str(queued_topic.id)+" "+queued_topic.title)
+            logger.info ('TWEETED topic '+str(topic.id)+" "+topic.title)
 
 def main():
     authenticate()
