@@ -20,11 +20,17 @@ def authenticate():
     global discourse_api
     global twitter_api
 
-    discourse_api = discourse.Client(
-        host=config('DISCOURSE_HOST'),
-        api_username=config('DISCOURSE_API_USER'),
-        api_key=config('DISCOURSE_API_KEY')
-        )
+    try:
+        discourse_api = discourse.Client(
+            host=config('DISCOURSE_HOST'),
+            api_username=config('DISCOURSE_API_USER'),
+            api_key=config('DISCOURSE_API_KEY')
+            )
+    except Exception as e:
+        logger.error("ERROR creating Discourse API", exc_info=True)
+        raise e
+    else:
+        logger.info("Discourse API created")
 
     twitter_auth = tweepy.OAuthHandler(
         config('TWITTER_API_KEY'),
@@ -39,10 +45,10 @@ def authenticate():
     try:
         twitter_api.verify_credentials()
     except Exception as e:
-        logger.error("Error creating API", exc_info=True)
+        logger.error("ERROR creating Twitter API", exc_info=True)
         raise e
     else:
-        logger.debug("Tweepy Twitter API created")
+        logger.info("Twitter API created")
 
 def get_settings():
     """ Get Bot settings. """
