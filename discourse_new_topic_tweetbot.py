@@ -117,7 +117,11 @@ def enque_newest_topics(queued_topics_len):
         Note: keeping queued_topics global so it's not copied around every
         N minutes."""
     global queued_topics
-    latest_topics           = discourse_api.get_latest_topics('default')
+    try:
+        latest_topics       = discourse_api.get_latest_topics('default')
+    except:
+        logger.info('Failed to retrieve latest topics from Discourse server')
+
     newest_topic_index      = 0
     compar_topic_created_at = latest_topics[newest_topic_index].created_at
     
@@ -191,8 +195,12 @@ def main():
                 queued_topics_len -= 1
                 sleep(TOPIC_REFRESH_INTERVAL*60)
                 topic_refresh_interval = 0
-                queued_topic = discourse_api.get_topic(queued_topic.id)
-                tweet(queued_topic)
+                try:
+                    queued_topic = discourse_api.get_topic(queued_topic.id)
+                except:
+                    logger.info('Failed to refresh latest topic from Discourse server')
+                else:
+                    tweet(queued_topic)
             else:
                 logger.info ("No new topics to tweet..")
                 topic_refresh_interval = TOPIC_REFRESH_INTERVAL
