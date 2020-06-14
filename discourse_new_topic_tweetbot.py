@@ -242,15 +242,12 @@ def main():
         user_answer = readkey()
         if user_answer.lower() == 'y':
             review_latest_topics()
-        elif user_answer.lower() == 'q':
-            exit()
 
     else:
         while True:
             if queued_topics_len > 0:
-                logger.info (str(queued_topics_len)
-                        +" new topic(s) to tweet. Refresh interval, sleeping for "
-                        +str(TOPIC_REFRESH_INTERVAL)+" min...")
+                logger.info (str(queued_topics_len)+" new topic(s) to tweet.")
+                logger.info ("Sleeping for topic refresh interval of "+str(TOPIC_REFRESH_INTERVAL)+" min...")
                 queued_topic = queued_topics.pop()
                 queued_topics_len -= 1
                 sleep(TOPIC_REFRESH_INTERVAL*60)
@@ -262,10 +259,10 @@ def main():
                 else:
                     tweet(queued_topic)
             else:
-                logger.info ("No new topics to tweet..")
+                logger.info ("0 new topic(s) to tweet.")
                 topic_refresh_interval = TOPIC_REFRESH_INTERVAL
 
-            logger.info ("Polling interval, sleeping for "
+            logger.info ("Sleeping for latest topics polling interval of "
                     +str(max(min(POLLING_INTERVAL,TOPIC_REFRESH_INTERVAL),POLLING_INTERVAL-topic_refresh_interval))
                     +" min...")
             sleep (max(min(POLLING_INTERVAL*60,TOPIC_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-topic_refresh_interval*60))
