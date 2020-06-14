@@ -16,7 +16,6 @@ from readchar import readkey
 try:
     logger_hostname = {'hostname':config('DISCOURSE_HOST').partition("//")[2]}
 except:
-    #if len(logger_hostname['hostname']) == 0:
     exit(argv[0]+' exited. settings.ini configuration incorrect or incomplete for DISCOURSE_HOST.')
 
 logger = logging.getLogger(__name__)
@@ -171,6 +170,24 @@ def enque_newest_topics(queued_topics_len):
 
     return queued_topics_len
 
+def review_topic(topic_id):
+    try:
+        #get the full topic, not the truncated one from latest_topics
+        topic = discourse_api.get_topic(topic_id)
+    except:
+        logger.info("Failed to get newest topic from Discourse server.")
+    else:
+        tweet_string = build_tweet_string(topic)
+        logger.info ("Next tweet from Discourse topic "+str(topic.id)+":\n"+tweet_string)
+        if TWEET_USE_THUMBNAILS and topic.image_url:
+            logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
+        logger.info ("Tweet this topic? (y/n/q)?")
+        user_answer = readkey()
+        if user_answer.lower() == 'y':
+            tweet(topic)
+        elif user_answer.lower() == 'q':
+            exit()
+
 def review_latest_topics():
     logger.info("Fetching latest topics from Discourse server...")
     try:
@@ -179,21 +196,19 @@ def review_latest_topics():
         logger.info("Failed to retrieve latest topics from Discourse server")
 
     for index, topic in enumerate(latest_topics):
-        try:
-            topic = discourse_api.get_topic(latest_topics[index].id)
-        except:
-            logger.info("Failed to get topic from Discourse server")
+        review_topic(topic.id)
+        #tweet_string = build_tweet_string(topic)
+        #logger.info ("Topic "+str(topic.id)+":\n"+tweet_string)
+        #if TWEET_USE_THUMBNAILS and topic.image_url:
+        #    logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
+        logger.info ("Review next topic (y/n/q)?")
+        user_answer = readkey()
+        if user_answer.lower() == 'y':
+            pass
+        elif user_answer.lower() == 'q':
+            exit()
         else:
-            tweet_string = build_tweet_string(topic)
-            logger.info ("Topic "+str(topic.id)+":\n"+tweet_string)
-            if TWEET_USE_THUMBNAILS and topic.image_url:
-                logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
-            logger.info ("Show next topic (y/n/q)?")
-            user_answer = readkey()
-            if user_answer.lower() == 'y':
-                pass
-            else:
-                break
+            break
 
 def tweet(topic):
     tweet_string = build_tweet_string(topic)
@@ -223,25 +238,18 @@ def main():
     queued_topics_len = enque_newest_topics(queued_topics_len)
 
     if stdin.isatty():
-        logger.info("⟫⟫⟫ Interactive testing mode ⟪⟪⟪  No tweets will be posted.")
+        logger.info("⟫⟫⟫ Interactive testing mode ⟪⟪⟪  No tweets will be posted without confirmation.")
         if queued_topics_len > 0:
-            try:
-                #get the full topic, not the truncated one from latest_topics
-                topic = discourse_api.get_topic(queued_topics[0].id)
-            except:
-                logger.info("Failed to get newest topic from Discourse server.")
-            else:
-                tweet_string = build_tweet_string(topic)
-                logger.info ("Next tweet from Discourse topic "+str(topic.id)+":\n"+tweet_string)
-                if TWEET_USE_THUMBNAILS and topic.image_url:
-                    logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
+            review_topic(queued_topics[0].id)
         else:
             logger.info ("No new Discourse topic to Tweet.")
 
-        logger.info ("Iterate through all topics in latest topics (y/n/q)?")
+        logger.info ("Review topics in latest topics (y/n/q)?")
         user_answer = readkey()
         if user_answer.lower() == 'y':
             review_latest_topics()
+        elif user_answer.lower() == 'q':
+            exit()
 
     else:
         while True:
