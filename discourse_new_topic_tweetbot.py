@@ -29,10 +29,14 @@ def authenticate():
             api_key=config('DISCOURSE_API_KEY')
             )
     except Exception as e:
-        logger.error("ERROR creating Discourse API", exc_info=True)
+        logger.error(config('DISCOURSE_HOST').partition("//")[2]
+                +": ERROR creating Discourse API for "
+                +config('DISCOURSE_API_USER'), exc_info=True)
         raise e
     else:
-        logger.info("Discourse API created")
+        logger.info(config('DISCOURSE_HOST').partition("//")[2]
+                +": Discourse API created for user "
+                +config('DISCOURSE_API_USER'))
 
     twitter_auth = tweepy.OAuthHandler(
         config('TWITTER_API_KEY'),
@@ -47,10 +51,14 @@ def authenticate():
     try:
         twitter_api.verify_credentials()
     except Exception as e:
-        logger.error("ERROR creating Twitter API", exc_info=True)
+        logger.error(config('DISCOURSE_HOST').partition("//")[2]
+                +": ERROR creating Twitter API for @"
+                +config('TWITTER_API_USER') , exc_info=True)
         raise e
     else:
-        logger.info("Twitter API created")
+        logger.info(config('DISCOURSE_HOST').partition("//")[2]
+            +": Twitter API created for @"
+            +config('TWITTER_API_USER'))
 
 def get_settings():
     """ Get Bot settings. """
@@ -127,7 +135,8 @@ def enque_newest_topics(queued_topics_len):
     try:
         latest_topics       = discourse_api.get_latest_topics('default')
     except:
-        logger.info('Failed to retrieve latest topics from Discourse server')
+        logger.info(logger_prepend
+                +"Failed to retrieve latest topics from Discourse server")
 
     newest_topic_index      = 0
     compar_topic_created_at = latest_topics[newest_topic_index].created_at
@@ -152,29 +161,35 @@ def enque_newest_topics(queued_topics_len):
                     queued_topics_len += 1
      
         if len(queued_topics) > queued_topics_len:
-            logger.info ('Added '+str(len(queued_topics)-queued_topics_len)+' item(s) to queue')
+            logger.info (logger_prepend
+                    +" Added "+str(len(queued_topics)-queued_topics_len)+' item(s) to queue')
             queued_topic.sort(queued_topics.id)
 
     return queued_topics_len
 
 def review_latest_topics():
-    logger.info('Fetching latest topics from Discourse server...')
+    logger.info(logger_prepend
+            +"Fetching latest topics from Discourse server...")
     try:
         latest_topics       = discourse_api.get_latest_topics('default')
     except:
-        logger.info('Failed to retrieve latest topics from Discourse server')
+        logger.info(logger_prepend
+                +"Failed to retrieve latest topics from Discourse server")
 
     for index, topic in enumerate(latest_topics):
         try:
             topic = discourse_api.get_topic(latest_topics[index].id)
         except:
-            logger.info('Failed to get topic from Discourse server')
+            logger.info(logger_prepend
+                    +"Failed to get topic from Discourse server")
         else:
             tweet_string = build_tweet_string(topic)
-            logger.info ("Topic "+str(topic.id)+":\n"+tweet_string)
+            logger.info (logger_prepend
+                    +"Topic "+str(topic.id)+":\n"+tweet_string)
             if TWEET_USE_THUMBNAILS and topic.image_url:
                 logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
-            logger.info ("Show next topic (y/n/q)?")
+            logger.info (logger_prepend
+                    +"Show next topic (y/n/q)?")
             user_answer = readkey()
             if user_answer.lower() == 'y':
                 pass
@@ -190,41 +205,52 @@ def tweet(topic):
         try:
             twitter_api.update_with_media(thumbnail_path, tweet_string)
         except:
-            logger.info ('TWEET FAILED topic '+str(topic.id)+" "+topic.title)
+            logger.info (logger_prepend
+                    +"TWEET FAILED topic "+str(topic.id)+" "+topic.title)
         else: 
-            logger.info ('TWEETED topic '+str(topic.id)+" "+topic.title)
+            logger.info (logger_prepend
+                    +"TWEETED topic "+str(topic.id)+" "+topic.title)
 
     else:
         try:
             twitter_api.update_status(tweet_string)
         except:
-            logger.info ('TWEET FAILED topic '+str(topic.id)+" "+topic.title)
+            logger.info (logger_prepend
+                    +"TWEET FAILED topic "+str(topic.id)+" "+topic.title)
         else: 
-            logger.info ('TWEETED topic '+str(topic.id)+" "+topic.title)
+            logger.info (logger_prepend
+                    +"TWEETED topic "+str(topic.id)+" "+topic.title)
 
 def main():
     authenticate()
     get_settings()
+    global logger_prepend
+    logger_prepend    = DISCOURSE_HOST.partition("//")[2]+": "
     queued_topics_len = -1
     queued_topics_len = enque_newest_topics(queued_topics_len)
 
     if stdin.isatty():
-        logger.info ("⟫⟫⟫ Interactive testing mode ⟪⟪⟪  No tweets will be posted.")
+        logger.info(logger_prepend
+                +"⟫⟫⟫ Interactive testing mode ⟪⟪⟪  No tweets will be posted.")
         if queued_topics_len > 0:
             try:
                 #get the full topic, not the truncated one from latest_topics
                 topic = discourse_api.get_topic(queued_topics[0].id)
             except:
-                logger.info('Failed to get newest topic from Discourse server')
+                logger.info(logger_prepend
+                        +"Failed to get newest topic from Discourse server.")
             else:
                 tweet_string = build_tweet_string(topic)
-                logger.info ("Next tweet from Discourse topic "+str(topic.id)+":\n"+tweet_string)
+                logger.info (logger_prepend
+                        +"Next tweet from Discourse topic "+str(topic.id)+":\n"+tweet_string)
                 if TWEET_USE_THUMBNAILS and topic.image_url:
                     logger.info (topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH))
         else:
-            logger.info ("No new Discourse topic to Tweet.")
+            logger.info (logger_prepend
+                    +"No new Discourse topic to Tweet.")
 
-        logger.info ("Iterate through all topics in latest topics (y/n/q)?")
+        logger.info (logger_prepend
+                +"Iterate through all topics in latest topics (y/n/q)?")
         user_answer = readkey()
         if user_answer.lower() == 'y':
             review_latest_topics()
@@ -232,7 +258,10 @@ def main():
     else:
         while True:
             if queued_topics_len > 0:
-                logger.info (str(queued_topics_len)+" new topic(s) to tweet!\nSleeping for "+str(TOPIC_REFRESH_INTERVAL)+"...")
+                logger.info (logger_prepend
+                        ++str(queued_topics_len)
+                        +" new topic(s) to tweet. Refresh interval, sleeping for "
+                        +str(TOPIC_REFRESH_INTERVAL)+" min...")
                 queued_topic = queued_topics.pop()
                 queued_topics_len -= 1
                 sleep(TOPIC_REFRESH_INTERVAL*60)
@@ -240,14 +269,19 @@ def main():
                 try:
                     queued_topic = discourse_api.get_topic(queued_topic.id)
                 except:
-                    logger.info('Failed to refresh latest topic from Discourse server')
+                    logger.info (logger_prepend
+                            +"Failed to refresh latest topic from Discourse server")
                 else:
                     tweet(queued_topic)
             else:
-                logger.info ("No new topics to tweet..")
+                logger.info (logger_prepend
+                        +"No new topics to tweet..")
                 topic_refresh_interval = TOPIC_REFRESH_INTERVAL
 
-            logger.info ("Sleeping for "+str(max(min(POLLING_INTERVAL,TOPIC_REFRESH_INTERVAL),POLLING_INTERVAL-topic_refresh_interval)))
+            logger.info (logger_prepend
+                    +"Polling interval, sleeping for "
+                    +str(max(min(POLLING_INTERVAL,TOPIC_REFRESH_INTERVAL),POLLING_INTERVAL-topic_refresh_interval))
+                    +" min...")
             sleep (max(min(POLLING_INTERVAL*60,TOPIC_REFRESH_INTERVAL*60),POLLING_INTERVAL*60-topic_refresh_interval*60))
             queued_topics_len = enque_newest_topics(queued_topics_len)
 
