@@ -96,19 +96,17 @@ class HTMLMentionsParser(HTMLParser):
             are hacky until this class & its methods are better understood."""
         global tweet_mentions
         global tweet_hashtags
-        tweet_hashtags = TWEET_HASHTAGS
-        tweet_mentions = TWEET_MENTIONS
 
         # customizations go here:
         if (    data.find('With ') > -1 or 
                 data.find('By ')  > -1 or
                 data.find('For ') > -1 ):
-            tweet_mentions += data.lstrip()
+            tweet_mentions += data
         if data.find('@') > -1:
             tweet_mentions += data
         if data.find('#') > -1:
             tweet_hashtags += data
-        #logger.info ("«"+data+"»")
+        logger.info ("«"+data+"»")
 
 parse_twitter_mentions = HTMLMentionsParser()
 
@@ -116,7 +114,9 @@ def build_tweet_string(topic):
     """ Builds a tweet. """
     global tweet_hashtags
     global tweet_mentions
-    tweet_prepend = TWEET_PREPEND
+    tweet_prepend  = TWEET_PREPEND
+    tweet_hashtags = TWEET_HASHTAGS
+    tweet_mentions = TWEET_MENTIONS
 
     parse_twitter_mentions.feed(topic.post_stream['posts'][0]['cooked'])
     parse_twitter_mentions.close
