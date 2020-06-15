@@ -169,8 +169,7 @@ def review_topic(topic_id):
         media_string = "WITH MEDIA inclusion:\n"
         media_string += topic.image_url+"\n"
         media_string += topic.image_url.replace(DISCOURSE_HOST,DISCOURSE_SHARED_PATH)+"\n"
-    logger.info ("From Discourse topic "+str(topic.id)+":\n\n"
-            +tweet_string+"\n\n"+media_string)
+    logger.info ("\n\n"+tweet_string+"\n\n"+media_string)
     logger.info ("Tweet topic "+str(topic.id)+"? (y/n/q)?")
     user_answer = readkey()
     if user_answer.lower() == 'y':
@@ -180,8 +179,7 @@ def review_topic(topic_id):
 
 def review_latest_topics():
     logger.info("======= ⟫⟫⟫ Interactive testing mode ⟪⟪⟪ =======")
-    logger.info("Discourse topics, sorted newest to oldest by creation date, in latest topics.")
-    logger.info("Press (y) to tweet.")
+    logger.info("Latest Discourse topics, sorted newest to oldest by creation date:")
     try:
         latest_topics       = discourse_api.get_latest_topics('default')
         latest_topics.sort(key=lambda topic: topic.created_at, reverse=True)
@@ -219,6 +217,7 @@ def tweet(topic):
 
 def main():
     global queued_topics
+    global logger
     authenticate()
     get_settings()
     queued_topics = []
@@ -254,8 +253,7 @@ def main():
                     logger.info ("Failed to refresh latest topic from Discourse server")
                     continue
                 else:
-                    tweet_success = tweet(queued_topic)
-                    if tweet_success:
+                    if tweet(queued_topic):
                         queued_topics.remove[len(queued_topics)-1]
                         queued_topics_len -= 1
             else:
