@@ -106,7 +106,7 @@ class HTMLMentionsParser(HTMLParser):
             tweet_mentions += data
         if data.find('#') > -1:
             tweet_hashtags += data
-        logger.info ("«"+data+"»")
+        #logger.info ("«"+data+"»")
 
 parse_twitter_mentions = HTMLMentionsParser()
 
