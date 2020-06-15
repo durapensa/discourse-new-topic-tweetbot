@@ -149,7 +149,7 @@ def enque_newest_topics(queued_topics_len, newest_topic_id):
 
     if len(queued_topics) > queued_topics_len:
         logger.info ("Added "+str(len(queued_topics)-queued_topics_len)+' item(s) to queue')
-        queued_topic.sort(queued_topics.id, reverse=True)
+        queued_topics.sort(queued_topics.id, reverse=True)
         newest_topic_id = queued_topic[0].id
         queued_topics_len = len(queued_topics)
 
