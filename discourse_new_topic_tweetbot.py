@@ -100,6 +100,7 @@ class HTMLMentionsParser(HTMLParser):
         # customizations go here:
         if (    data.find('With ') > -1 or 
                 data.find('By ')  > -1 or
+                data.find('Created by ')  > -1 or
                 data.find('For ') > -1 ):
             tweet_mentions += data
         if data.find('@') > -1:
@@ -150,7 +151,7 @@ def enque_newest_topics(queued_topics_len, newest_topic_id):
     if len(queued_topics) > queued_topics_len:
         logger.info ("Added "+str(len(queued_topics)-queued_topics_len)+' item(s) to queue')
         queued_topics.sort(queued_topics.id, reverse=True)
-        newest_topic_id = queued_topic[0].id
+        newest_topic_id = queued_topics[0].id
         queued_topics_len = len(queued_topics)
 
     return queued_topics_len, newest_topic_id
