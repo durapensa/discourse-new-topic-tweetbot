@@ -255,7 +255,7 @@ def main():
                     continue
                 else:
                     if tweet(queued_topic):
-                        queued_topics.remove[len(queued_topics)-1]
+                        queued_topics.remove(queued_topics[len(queued_topics)-1])
                         queued_topics_len -= 1
             else:
                 logger.info ("0 new topic(s) to tweet.")
