@@ -27,7 +27,7 @@ logger.addHandler(streamhandler)
 logger = logging.LoggerAdapter(logger, logger_hostname)
 
 def authenticate():
-    """ Authenticate to Discourse & Twitter and create API object. """
+    """ Authenticate to Discourse & Twitter and create API objects. """
     global discourse_api
     global twitter_api
 
@@ -134,14 +134,14 @@ def build_tweet_string(topic):
 
 def enque_newest_topics(queued_topics_len, newest_topic_id):
     """ Find the newest Discourse topics *among the latest topics* from
-        latest.json and appends them to queued_topics for tweeting. 
+        latest.json and append them to queued_topics for tweeting. 
         Note: keeping queued_topics global so it's not copied around every
         N minutes."""
     global queued_topics
     try:
         latest_topics       = discourse_api.get_latest_topics('default')
     except:
-        logger.info("Failed to retrieve latest topics from Discourse server")
+        logger.info("Failed to retrieve latest topics from Discourse server.")
         return
 
     for topic in latest_topics:
@@ -149,7 +149,7 @@ def enque_newest_topics(queued_topics_len, newest_topic_id):
             queued_topics.append(topic)
 
     if len(queued_topics) > queued_topics_len:
-        logger.info ("Added "+str(len(queued_topics)-queued_topics_len)+' topic(s) to tweet queue')
+        logger.info ("Added "+str(len(queued_topics)-queued_topics_len)+" topic(s) to tweet queue.")
         queued_topics.sort(key=lambda topic: topic.id, reverse=True)
         newest_topic_id = queued_topics[0].id
         queued_topics_len = len(queued_topics)
@@ -185,7 +185,7 @@ def review_latest_topics():
         latest_topics       = discourse_api.get_latest_topics('default')
         latest_topics.sort(key=lambda topic: topic.created_at, reverse=True)
     except:
-        logger.info("Failed to retrieve latest topics from Discourse server")
+        logger.info("Failed to retrieve latest topics from Discourse server.")
         return
 
     for index, topic in enumerate(latest_topics):
@@ -218,7 +218,6 @@ def tweet(topic):
 
 def main():
     global queued_topics
-    global logger
     authenticate()
     get_settings()
     queued_topics = []
@@ -251,7 +250,7 @@ def main():
                 try:
                     queued_topic = discourse_api.get_topic(queued_topic.id)
                 except:
-                    logger.info ("Failed to refresh latest topic from Discourse server")
+                    logger.info ("Failed to refresh latest topic from Discourse server.")
                     continue
                 else:
                     if tweet(queued_topic):

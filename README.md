@@ -71,6 +71,8 @@ https://pypi.org/project/tweepy/
 
 https://pypi.org/project/python-decouple/ 
 
+Thanks also to Evolution Host https://evolution-host.com for provision of a Developer VPS.
+
 \* At startup, the bot will poll & wait for new topics to appear in
 `/latest.json` (that is, newer by creation date than the newest topic by
 creation date found on the first polling), then tweet those newer topics.
